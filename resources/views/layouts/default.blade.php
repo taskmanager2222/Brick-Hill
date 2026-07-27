@@ -1,27 +1,3 @@
-<!--
-MIT License
-
-Copyright (c) 2021-2022 FoxxoSnoot
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
--->
-
 <!DOCTYPE html>
 <html lang="en" class="theme-{{ Auth::user()->setting->theme ?? 'default' }}">
 <head>
@@ -30,11 +6,9 @@ SOFTWARE.
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>{{ isset($title) ? "{$title} - " . config('site.name') : config('site.name') }}</title>
 
-    <!-- Preconnect -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://fonts.gstatic.com">
 
-    <!-- Meta -->
     <meta name="theme-color" content="{{ config('site.theme_color') }}">
     <link rel="shortcut icon" href="{{ config('site.icon') }}">
     <meta name="author" content="{{ config('site.name') }}">
@@ -43,19 +17,31 @@ SOFTWARE.
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @yield('meta')
 
-    <!-- OpenGraph -->
+    @auth
+    <meta
+        name="user-data"
+        data-authenticated="true"
+        data-id="{{ auth()->id() }}"
+        data-username="{{ auth()->user()->username }}"
+        data-bucks="{{ auth()->user()->currency_bucks }}"
+        data-bits="{{ auth()->user()->currency_bits }}"
+        data-admin="{{ auth()->user()->isStaff() ? 'true' : 'false' }}"
+    >
+    @endauth
+    @guest
+    <meta name="user-data" data-authenticated="false">
+    @endguest
+
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{ config('site.name') }}">
     <meta property="og:title" content="{{ $title ?? config('site.name') }}">
     <meta property="og:description" content="Brick building, brick build together part piece construct make create set.">
     <meta property="og:image" content="{{ !isset($image) ? config('site.icon') : $image }}">
 
-    <!-- Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&display=swap">
     @yield('fonts')
 
-    <!-- CSS -->
     <link rel="stylesheet" href="{{ theme_file() }}">
     <link rel="stylesheet" href="{{ asset('css/newtheme.css') }}">
     <style>#globalError:empty, .dropdown-content:not(.active) { display: none; }</style>
@@ -63,95 +49,94 @@ SOFTWARE.
 </head>
 <body>
     <nav>
-            <div class="primary">
-                <div class="grid">
-                    <div class="push-left">
-                        <ul>
-                            <li><a href="{{ route('games.index') }}">Play</a></li>
-                            <li><a href="{{ route('shop.index') }}">Shop</a></li>
-                            <li><a href="{{ route('clans.index') }}">Clans</a></li>
-                            <li><a href="{{ route('users.index', '') }}">Users</a></li>
-                            <li><a href="{{ route('forum.index') }}">Forum</a></li>
-                            <li><a href="{{ route('account.billing.index') }}">Membership</a></li>
-                            @if (Auth::check() && Auth::user()->isStaff())
+        <div class="primary">
+            <div class="grid">
+                <div class="push-left">
+                    <ul>
+                        <li><a href="{{ route('games.index') }}">Play</a></li>
+                        <li><a href="{{ route('shop.index') }}">Shop</a></li>
+                        <li><a href="{{ route('clans.index') }}">Clans</a></li>
+                        <li><a href="{{ route('users.index', '') }}">Users</a></li>
+                        <li><a href="{{ route('forum.index') }}">Forum</a></li>
+                        <li><a href="{{ route('account.billing.index') }}">Membership</a></li>
+                        @if (Auth::check() && Auth::user()->isStaff())
+                            <li>
+                                <a href="{{ route('admin.index') }}" target="_blank">
+                                    Admin
+                                    @if (pendingAssetsCount() > 0 || pendingReportsCount() > 0)
+                                        <span class="nav-notif">
+                                            @if (pendingAssetsCount() > 0)
+                                                <span>(A: {{ number_format(pendingAssetsCount()) }})</span>
+                                            @endif
+                                            @if (pendingReportsCount() > 0)
+                                                <span>(R: {{ number_format(pendingReportsCount()) }})</span>
+                                            @endif
+                                        </span>
+                                    @endif
+                                </a>
+                            </li>
+                        @endif
+                    </ul>
+                </div>
+                <div class="nav-user push-right" id="info">
+                    @guest
+                        <div class="username login-buttons">
+                            <a href="{{ route('auth.login.index') }}" class="login-button">Login</a>
+                            <a href="{{ route('auth.register.index') }}" class="register-button">Register</a>
+                        </div>
+                    @else
+                        @if (!request()->isMaintenancePage)
+                            <div class="info">
+                                <a href="{{ route('account.currency.index', '') }}" class="header-data" title="{{ number_format(Auth::user()->currency_bucks) }}">
+                                    <span class="bucks-icon img-white"></span> {{ shorten_number(Auth::user()->currency_bucks) }}
+                                </a>
+                                <a href="{{ route('account.currency.index', '') }}" class="header-data" title="{{ number_format(Auth::user()->currency_bits) }}">
+                                    <span class="bits-icon img-white"></span> {{ shorten_number(Auth::user()->currency_bits) }}
+                                </a>
+                                <a href="{{ route('account.inbox.index', '') }}" class="header-data">
+                                    <span class="messages-icon img-white"></span> {{ number_format(Auth::user()->messageCount()) }}
+                                </a>
+                                <a href="{{ route('account.friends.index') }}" class="header-data">
+                                    <span class="friends-icon img-white"></span> {{ number_format(Auth::user()->friendRequestCount()) }}
+                                </a>
+                            </div>
+                        @endif
+                        <div class="username ellipsis" data-dropdown-open="logout">
+                            <div class="username-holder ellipsis inline unselectable">{{ Auth::user()->username }}</div>
+                            <i class="arrow-down img-white"></i>
+                        </div>
+                    @endguest
+                </div>
+            </div>
+        </div>
+        @auth
+            @if (!request()->isMaintenancePage)
+                <div class="secondary">
+                    <div class="grid">
+                        <div class="bottom-bar">
+                            <ul>
+                                <li><a href="{{ route('home.dashboard') }}" id="pHome">Home</a></li>
+                                <li><a href="{{ route('account.settings.index') }}" id="pSettings">Settings</a></li>
+                                <li><a href="{{ route('account.character.index') }}" id="pAvatar">Avatar</a></li>
+                                <li><a href="{{ route('users.profile', Auth::user()->id) }}" id="pProfile">Profile</a></li>
+                                <li><a href="{{ route('games.download') }}" id="pDownload">Download</a></li>
                                 <li>
-                                    <a href="{{ route('admin.index') }}" target="_blank">
-                                        Admin
-                                        @if (pendingAssetsCount() > 0 || pendingReportsCount() > 0)
-                                            <span class="nav-notif">
-                                                @if (pendingAssetsCount() > 0)
-                                                    <span>(A: {{ number_format(pendingAssetsCount()) }})</span>
-                                                @endif
-
-                                                @if (pendingReportsCount() > 0)
-                                                    <span>(R: {{ number_format(pendingReportsCount()) }})</span>
-                                                @endif
-                                            </span>
+                                    <a href="{{ route('account.trades.index') }}" id="pTrades">
+                                        <span>Trades</span>
+                                        @if (Auth::user()->tradeCount() > 0)
+                                            <span class="nav-notif">{{ number_format(Auth::user()->tradeCount()) }}</span>
                                         @endif
                                     </a>
                                 </li>
-                            @endif
-                        </ul>
-                    </div>
-                    <div class="nav-user push-right" id="info">
-                        @guest
-                            <div class="username login-buttons">
-                                <a href="{{ route('auth.login.index') }}" class="login-button">Login</a>
-                                <a href="{{ route('auth.register.index') }}" class="register-button">Register</a>
-                            </div>
-                        @else
-                            @if (!request()->isMaintenancePage)
-                                <div class="info">
-                                    <a href="{{ route('account.currency.index', '') }}" class="header-data" title="{{ number_format(Auth::user()->currency_bucks) }}">
-                                        <span class="bucks-icon img-white"></span> {{ shorten_number(Auth::user()->currency_bucks) }}
-                                    </a>
-                                    <a href="{{ route('account.currency.index', '') }}" class="header-data" title="{{ number_format(Auth::user()->currency_bits) }}">
-                                        <span class="bits-icon img-white"></span> {{ shorten_number(Auth::user()->currency_bits) }}
-                                    </a>
-                                    <a href="{{ route('account.inbox.index', '') }}" class="header-data">
-                                        <span class="messages-icon img-white"></span> {{ number_format(Auth::user()->messageCount()) }}
-                                    </a>
-                                    <a href="{{ route('account.friends.index') }}" class="header-data">
-                                        <span class="friends-icon img-white"></span> {{ number_format(Auth::user()->friendRequestCount()) }}
-                                    </a>
-                                </div>
-                            @endif
-                            <div class="username ellipsis" data-dropdown-open="logout">
-                                <div class="username-holder ellipsis inline unselectable">{{ Auth::user()->username }}</div>
-                                <i class="arrow-down img-white"></i>
-                            </div>
-                        @endguest
-                    </div>
-                </div>
-            </div>
-            @auth
-                @if (!request()->isMaintenancePage)
-                    <div class="secondary">
-                        <div class="grid">
-                            <div class="bottom-bar">
-                                <ul>
-                                    <li><a href="{{ route('home.dashboard') }}" id="pHome">Home</a></li>
-                                    <li><a href="{{ route('account.settings.index') }}" id="pSettings">Settings</a></li>
-                                    <li><a href="{{ route('account.character.index') }}" id="pAvatar">Avatar</a></li>
-                                    <li><a href="{{ route('users.profile', Auth::user()->id) }}" id="pProfile">Profile</a></li>
-                                    <li><a href="{{ route('games.download') }}" id="pDownload">Download</a></li>
-                                    <li>
-                                        <a href="{{ route('account.trades.index') }}" id="pTrades">
-                                            <span>Trades</span>
-                                            @if (Auth::user()->tradeCount() > 0)
-                                                <span class="nav-notif">{{ number_format(Auth::user()->tradeCount()) }}</span>
-                                            @endif
-                                        </a>
-                                    </li>
-                                    <li><a href="{{ route('games.creations') }}" id="pSets">Sets</a></li>
-                                    <li><a href="{{ route('account.currency.index', '') }}" id="pCurrency">Currency</a></li>
-                                    <li><a href="https://blog.hill-of-bricks.com" id="pBlog">Blog</a></li>
-                                </ul>
-                            </div>
+                                <li><a href="{{ route('games.creations') }}" id="pSets">Sets</a></li>
+                                <li><a href="{{ route('account.currency.index', '') }}" id="pCurrency">Currency</a></li>
+                                <li><a href="https://blog.hill-of-bricks.com" id="pBlog">Blog</a></li>
+                            </ul>
                         </div>
                     </div>
-                @endif
-            @endauth
+                </div>
+            @endif
+        @endauth
     </nav>
 
     @yield('before_content')
@@ -230,12 +215,18 @@ SOFTWARE.
     </div>
 
     <footer>
-        <div>© {{ date('Y') }} {{ config('site.name') }}. All rights reserved.</div>
-        <a href="{{ route('info.terms') }}">Terms of Service</a>
-        <span>|</span>
-        <a href="{{ route('info.privacy') }}">Privacy Policy</a>
-        <span>|</span>
-        <a href="{{ route('info.staff') }}">Staff</a>
+        <div class="grid">
+            <div class="col-10-12 push-1-12" style="text-align:center;padding:20px 0;">
+                <div>© {{ date('Y') }} {{ config('site.name') }}. All rights reserved.</div>
+                <div style="margin-top:5px;">
+                    <a href="{{ route('info.terms') }}">Terms of Service</a>
+                    <span style="margin:0 8px;">|</span>
+                    <a href="{{ route('info.privacy') }}">Privacy Policy</a>
+                    <span style="margin:0 8px;">|</span>
+                    <a href="{{ route('info.staff') }}">Staff</a>
+                </div>
+            </div>
+        </div>
     </footer>
 
     @auth
@@ -250,7 +241,6 @@ SOFTWARE.
         </div>
     @endauth
 
-    <!-- JS -->
     <script src="{{ js_file('bundle') }}"></script>
     <script src="{{ js_file('app') }}"></script>
     @yield('js')
