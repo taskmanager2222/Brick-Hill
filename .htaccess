@@ -1,0 +1,17 @@
+<IfModule mod_rewrite.c>
+    Options -Indexes
+    RewriteEngine On
+
+    # Keep Laravel internals and secrets out of the web.
+    RewriteRule ^(\.env|\.env\..*|artisan|composer\.(json|lock)|server\.php|README\.md|LICENSE)$ - [F,L,NC]
+    RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests|vendor)(/|$) - [F,L,NC]
+
+    # Serve real public files from /public while the project lives in htdocs.
+    RewriteRule ^public/ - [L]
+    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -d
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Send everything else to Laravel's front controller.
+    RewriteRule ^(.*)$ public/index.php [L,QSA]
+</IfModule>
